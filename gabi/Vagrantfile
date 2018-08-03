@@ -1,0 +1,48 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+myboxname = "gabi"
+
+Vagrant.configure("2") do |config|
+  config.vm.box = "ubuntu/xenial64"
+  config.vm.hostname = myboxname
+  config.vm.box_check_update = false
+
+  config.vm.network "private_network", ip: "192.168.33.10"
+
+  config.vm.synced_folder "./data", "/data"
+
+  config.vm.provider "virtualbox" do |vb|
+     vb.gui = false
+     vb.name = myboxname
+     vb.memory = "512"
+     vb.linked_clone = true
+   end
+
+  #
+  # Provides minimal tools
+  #
+  config.vm.provision "bootstrap", type: "shell" do |s|
+    s.inline = <<-SHELL
+      add-apt-repository -y ppa:git-core/ppa
+      apt-get update
+      apt-get install -y tree dos2unix zsh byobu htop git httpie curl apt-transport-https ca-certificates software-properties-common
+      SHELL
+  end
+
+  #
+  # Install Hugo binary (no Go interpreter needed)
+  #
+  config.vm.provision "hugo", type: "shell" do |s|
+    s.inline = <<-SHELL
+      cd /usr/local/bin
+      TARFILE=hugo_0.46_Linux-64bit.tar.gz CHKFILE=hugo_0.46_checksums.txt
+      wget -q https://github.com/gohugoio/hugo/releases/download/v0.46/$TARFILE -O $TARFILE
+      wget -q https://github.com/gohugoio/hugo/releases/download/v0.46/$CHKFILE -O $CHKFILE 
+      sha256sum --ignore-missing -c $CHKFILE || exit 1
+      tar xf $TARFILE
+      rm -f $TARFILE $CHKFILE
+      hugo version
+      SHELL
+  end
+end
